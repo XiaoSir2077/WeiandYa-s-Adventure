@@ -55,8 +55,8 @@ export const StartView: React.FC<StartViewProps> = ({ onStart }) => {
         <div className="relative z-10 w-full max-w-md flex flex-col items-center">
           <div className="mb-20 animate-float">
             <h1 className="text-6xl md:text-8xl font-black font-cartoon text-white text-center tracking-wider text-outline-lg leading-tight drop-shadow-2xl">
-              <span className="block -mb-2 text-yellow-400">异世界</span>
-              <span className="block">大冒险</span>
+              <span className="block -mb-2 text-yellow-400">知识大陆</span>
+              <span className="block">勇气传说</span>
             </h1>
           </div>
 
