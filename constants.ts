@@ -6,12 +6,19 @@ export const MAX_ENERGY = 10; // Max accumulated energy
 
 // --- ASSETS REGISTRY ---
 export const ASSETS = {
-  BG_MAIN: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E4%B8%BB%E7%95%8C%E9%9D%A2.png",
-  BG_VICTORY: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E8%83%9C%E5%88%A9%E9%A1%B5%E9%9D%A2.png",
-  BG_GAME_OVER: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%A4%B1%E8%B4%A5%E9%A1%B5%E9%9D%A2.png",
-  ROLE_XIAOWEI: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%B0%8F%E5%A8%81.png",
-  ROLE_XIAOYA: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%B0%8F%E8%8A%BD.png",
-  BOSS_DRAGON: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E9%AD%94%E9%BE%99Boss.png",
+  // Updated Image Assets based on specific user provided URLs
+  BG_MAIN: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E4%B8%BB%E7%95%8C%E9%9D%A2.png",
+  BG_VICTORY: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E8%83%9C%E5%88%A9%E9%A1%B5%E9%9D%A2.png",
+  BG_GAME_OVER: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E5%A4%B1%E8%B4%A5%E9%A1%B5%E9%9D%A2.png",
+  
+  ROLE_XIAOWEI: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E5%B0%8F%E5%A8%81.png",
+  ROLE_XIAOYA: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E5%B0%8F%E8%8A%BD.png",
+  
+  BOSS_DRAGON: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E9%AD%94%E9%BE%99Boss.png",
+  
+  // Audio Assets
+  BGM_MENU: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E7%AB%A5%E8%AF%9D%E6%A3%AE%E6%9E%97%E7%9A%84%E6%97%A9%E6%99%A8%EF%BC%88%E6%97%A0%E6%95%8C%E5%96%9C%E6%AC%A2%EF%BC%89.mp3",
+  BGM_BATTLE: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%8B%87%E6%B0%94%E5%A4%A7%E5%86%92%E9%99%A9%C2%B7%E6%88%98%E6%96%97BGM.mp3"
 };
 
 // --- Level Configurations ---
@@ -20,10 +27,10 @@ export const LEVELS: LevelConfig[] = [
     levelNumber: 1,
     name: "迷雾森林",
     bossName: "果冻史莱姆",
-    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%8F%B2%E8%8E%B1%E5%A7%86.png", 
+    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E5%8F%B2%E8%8E%B1%E5%A7%86.png", 
     bossHealth: 25, 
     bgGradient: "from-green-300 to-emerald-600",
-    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E8%BF%B7%E9%9B%BE%E6%A3%AE%E6%9E%97.png",
+    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E8%BF%B7%E9%9B%BE%E6%A3%AE%E6%9E%97.png",
     themeColor: "text-emerald-700",
     element: 'nature' 
   },
@@ -31,10 +38,10 @@ export const LEVELS: LevelConfig[] = [
     levelNumber: 2,
     name: "熔岩火山",
     bossName: "火焰石头人",
-    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E7%9F%B3%E5%B7%A8%E4%BA%BA.png", 
+    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E7%9F%B3%E5%B7%A8%E4%BA%BA.png", 
     bossHealth: 60, 
     bgGradient: "from-orange-300 to-red-700",
-    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E7%82%8E%E7%83%AD%E7%81%AB%E5%B1%B1.png",
+    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E7%82%8E%E7%83%AD%E7%81%AB%E5%B1%B1.png",
     themeColor: "text-orange-800",
     element: 'fire' 
   },
@@ -42,10 +49,10 @@ export const LEVELS: LevelConfig[] = [
     levelNumber: 3,
     name: "魔王城堡",
     bossName: "暗夜魔龙",
-    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E9%AD%94%E9%BE%99Boss.png", 
+    bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E9%AD%94%E9%BE%99Boss.png", 
     bossHealth: 100,
     bgGradient: "from-indigo-400 to-purple-900",
-    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E9%AD%94%E7%8E%8B%E5%9F%8E.png",
+    bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E9%AD%94%E7%8E%8B%E5%9F%8E.png",
     themeColor: "text-purple-900",
     element: 'dark' 
   }

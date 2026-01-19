@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StartView } from './components/StartView';
 import { GameView } from './components/GameView';
 import { ResultView } from './components/ResultView';
-import { QUESTIONS, LEVELS, CARDS, MAX_PLAYER_HEALTH, MAX_ENERGY } from './constants';
+import { QUESTIONS, LEVELS, CARDS, MAX_PLAYER_HEALTH, MAX_ENERGY, ASSETS } from './constants';
 import { GameState, GameStage, Card, PlayerRole, ElementType, Question, HandCard } from './types';
 
 // Helper: Fisher-Yates Shuffle
@@ -80,6 +80,67 @@ export default function App() {
     knowledgeCollected: [],
     questions: [], 
   });
+
+  // --- AUDIO MANAGER ---
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize Audio
+  useEffect(() => {
+    audioRef.current = new Audio(ASSETS.BGM_MENU);
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.5; // Set volume to 50%
+
+    // Attempt autoplay, if blocked, wait for first click
+    const playAudio = () => {
+        audioRef.current?.play().catch(() => {
+            // Autoplay blocked
+        });
+    };
+
+    playAudio();
+
+    const handleFirstInteraction = () => {
+        playAudio();
+        document.removeEventListener('click', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+        document.removeEventListener('click', handleFirstInteraction);
+    };
+  }, []);
+
+  // Handle BGM Switching based on GameStage
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    // Define which stage uses Battle music
+    const isBattleStage = gameState.stage === GameStage.PLAYING || 
+                          gameState.stage === GameStage.LEVEL_TRANSITION ||
+                          gameState.stage === GameStage.GAME_OVER ||
+                          gameState.stage === GameStage.RESULT;
+
+    const targetSrc = isBattleStage ? ASSETS.BGM_BATTLE : ASSETS.BGM_MENU;
+
+    // Only switch if source is different to avoid restarting
+    if (audioRef.current.src !== targetSrc) {
+        // Simple crossfade hack: lower volume, switch, raise volume
+        audioRef.current.volume = 0.2;
+        setTimeout(() => {
+            if (audioRef.current) {
+                audioRef.current.src = targetSrc;
+                audioRef.current.play().catch(e => console.log("Audio play error", e));
+                audioRef.current.volume = 0.5;
+            }
+        }, 200);
+    }
+  }, [gameState.stage]);
+  // ---------------------
 
   const startLevel = (
     levelIndex: number, 

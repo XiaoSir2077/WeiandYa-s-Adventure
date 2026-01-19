@@ -11,32 +11,6 @@ interface GameViewProps {
   onNextLevel: () => void;
 }
 
-const getElementIcon = (el: ElementType) => {
-  switch(el) {
-    case 'fire': return '🔥';
-    case 'water': return '💧';
-    case 'nature': return '🍃';
-    case 'light': return '⚡';
-    case 'dark': return '🌑';
-    case 'physical': return '⚔️';
-    case 'heal': return '💖';
-    default: return '';
-  }
-};
-
-const getElementColor = (el: ElementType) => {
-    switch(el) {
-      case 'fire': return 'text-red-500';
-      case 'water': return 'text-blue-500';
-      case 'nature': return 'text-green-500';
-      case 'light': return 'text-yellow-500';
-      case 'dark': return 'text-purple-500';
-      case 'physical': return 'text-slate-500';
-      case 'heal': return 'text-pink-500';
-      default: return 'text-gray-500';
-    }
-  };
-
 export const GameView: React.FC<GameViewProps> = ({ 
   currentQuestion, 
   gameState, 
@@ -70,21 +44,28 @@ export const GameView: React.FC<GameViewProps> = ({
   // --- LEVEL COMPLETE SCREEN ---
   if (gameState.stage === GameStage.LEVEL_TRANSITION) {
     return (
-      <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center animate-fade-in p-6 text-center">
-         <img 
-            src={currentLevel.bossIcon} 
-            alt={currentLevel.bossName}
-            className="w-48 h-48 object-contain mb-4 animate-bounce filter drop-shadow-2xl grayscale opacity-50"
-         />
-         <h2 className="text-4xl text-white font-black font-cartoon mb-2">
-           打败了 {currentLevel.bossName}!
+      <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center animate-fade-in p-6 text-center">
+         <div className="relative">
+            <div className="absolute inset-0 bg-yellow-400 blur-3xl opacity-20 animate-pulse"></div>
+            <img 
+                src={currentLevel.bossIcon} 
+                alt={currentLevel.bossName}
+                className="w-48 h-48 object-contain mb-8 animate-bounce filter drop-shadow-2xl grayscale opacity-50 relative z-10"
+            />
+         </div>
+         <h2 className="text-5xl text-white font-black font-cartoon mb-4 text-outline drop-shadow-lg">
+           胜利!
          </h2>
-         <p className="text-yellow-300 text-xl font-bold mb-8">Level Complete!</p>
+         <p className="text-yellow-300 text-2xl font-bold mb-12">打败了 {currentLevel.bossName}</p>
+         
          <button 
            onClick={onNextLevel}
-           className="px-8 py-4 bg-green-500 hover:bg-green-400 text-white rounded-2xl font-black text-2xl shadow-[0_6px_0_#15803d] active:translate-y-1 active:shadow-none transition-all"
+           className="relative group w-64 h-20"
          >
-           前往下一关 ➡️
+           <div className="absolute inset-0 bg-green-700 rounded-2xl translate-y-2"></div>
+           <div className="absolute inset-0 bg-green-500 rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-green-700 active:translate-y-2 transition-transform group-hover:bg-green-400">
+             <span className="text-white font-black text-2xl font-cartoon tracking-wider">下一关 ➡️</span>
+           </div>
          </button>
       </div>
     );
@@ -102,12 +83,12 @@ export const GameView: React.FC<GameViewProps> = ({
     }
 
     return (
-      <div className={`absolute inset-0 z-50 ${introBg} flex flex-col items-center justify-center animate-fade-in overflow-hidden`}>
-          <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%,transparent_100%)] bg-[length:50px_50px] animate-[pulse_2s_infinite]"></div>
+      <div className={`fixed inset-0 z-50 ${introBg} flex flex-col items-center justify-center animate-fade-in overflow-hidden`}>
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#ffffff_2px,transparent_2px)] [background-size:30px_30px]"></div>
           
           <div className="relative z-10 flex flex-col items-center">
-            <div className="text-yellow-400 text-2xl md:text-4xl font-black font-cartoon tracking-widest mb-4 animate-pulse uppercase border-y-4 border-yellow-400 py-2 px-8 bg-black/30 backdrop-blur-sm">
-                ⚠️ WARNING ⚠️
+            <div className="text-yellow-400 text-3xl md:text-5xl font-black font-cartoon tracking-widest mb-8 animate-pulse uppercase border-y-8 border-yellow-500 py-4 px-12 bg-black/50 backdrop-blur-md transform -skew-x-12 shadow-2xl">
+                ⚠️ 前方高能 ⚠️
             </div>
             
             <img 
@@ -116,114 +97,131 @@ export const GameView: React.FC<GameViewProps> = ({
                 className={`w-64 h-64 md:w-80 md:h-80 object-contain my-4 filter drop-shadow-[0_0_50px_rgba(255,255,255,0.4)] ${animationClass} transition-all duration-500`}
             />
 
-            <h2 className="text-5xl md:text-7xl text-white font-black font-cartoon text-outline-lg mb-2 animate-pop" style={{ animationDelay: '0.3s' }}>
+            <h2 className="text-5xl md:text-7xl text-white font-black font-cartoon text-outline-lg mb-4 animate-pop drop-shadow-2xl" style={{ animationDelay: '0.3s' }}>
                 {currentLevel.bossName}
             </h2>
-            <div className="flex items-center gap-2 mt-4 bg-black/40 px-4 py-2 rounded-full border border-white/20">
-                <span className="text-white font-bold">属性:</span>
-                <span className="text-2xl">{getElementIcon(currentLevel.element)}</span>
-                <span className={`font-bold uppercase ${getElementColor(currentLevel.element)}`}>{currentLevel.element}</span>
-            </div>
           </div>
       </div>
     );
   }
 
-  // NEW LAYOUT: BATTLE (Top) -> QUESTION (Middle) -> DECK (Bottom)
+  // MAIN LAYOUT
   return (
-    <div className="flex flex-col h-full bg-slate-100 relative overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-slate-900 relative overflow-hidden">
       
-      {/* 1. TOP: BATTLE ARENA (45% height) */}
+      {/* 1. TOP SCENE (45%) */}
       <div 
-        className="relative h-[45%] flex-shrink-0 w-full overflow-hidden border-b-4 border-black/20 shadow-lg bg-cover bg-center transition-all duration-500"
+        className="relative h-[45%] flex-shrink-0 w-full overflow-hidden shadow-2xl bg-cover bg-center transition-all duration-500 z-0"
         style={{ backgroundImage: `url(${currentLevel.bgImage})` }}
       >
-        {/* Dark overlay for better visibility */}
-        <div className="absolute inset-0 bg-black/10"></div>
+        {/* Vignette Overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]"></div>
 
-        {/* HUD */}
-        <div className="absolute top-0 w-full p-2 flex justify-between items-start z-20">
+        {/* HUD: Top Bar */}
+        <div className="absolute top-0 w-full p-2 pt-3 flex justify-between items-start z-20">
+          
+          {/* Player Health */}
           <div className="flex flex-col items-start gap-1">
-              <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-full border-2 border-white/30 backdrop-blur-sm mt-1">
-                  {[...Array(gameState.maxPlayerHealth)].map((_, i) => (
-                      <span key={i} className={`text-xl md:text-2xl transition-all duration-300 ${i < gameState.playerHealth ? 'scale-100 animate-pulse' : 'scale-90 grayscale opacity-30'}`}>
-                          ❤️
-                      </span>
-                  ))}
+              <div className="flex items-center gap-1 bg-black/50 p-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-inner border border-red-300">
+                     <span className="text-sm">❤️</span>
+                  </div>
+                  <div className="flex px-2 gap-1">
+                    {[...Array(gameState.maxPlayerHealth)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`w-3 h-6 rounded-sm border border-white/30 transition-all duration-300 ${i < gameState.playerHealth ? 'bg-gradient-to-t from-red-600 to-red-400 shadow-[0_0_8px_rgba(220,38,38,0.8)]' : 'bg-slate-700/50'}`}
+                        ></div>
+                    ))}
+                  </div>
               </div>
           </div>
 
-          <div className="flex flex-col items-end w-1/2">
-            <div className="flex items-center gap-2 mb-1">
-               <span className="text-white font-cartoon text-lg font-black drop-shadow-md">{currentLevel.bossName}</span>
-               <div className="relative">
-                 <img src={currentLevel.bossIcon} className="w-8 h-8 object-contain filter drop-shadow" alt="boss-icon" />
-               </div>
+          {/* Boss Health */}
+          <div className="flex flex-col items-end w-[50%]">
+            <div className="flex items-center gap-2 mb-1 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+               <span className="text-white font-cartoon text-sm font-black drop-shadow-md tracking-wide">{currentLevel.bossName}</span>
+               <img src={currentLevel.bossIcon} className="w-5 h-5 object-contain" alt="boss-icon" />
             </div>
-            <div className="w-full h-4 bg-slate-900/50 rounded-full border-2 border-white overflow-hidden relative shadow-lg backdrop-blur-sm">
+            {/* Glossy HP Bar */}
+            <div className="w-full h-4 bg-slate-900/80 rounded-full border border-slate-600 overflow-hidden relative shadow-lg">
                 <div 
-                  className="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-500 ease-out"
+                  className="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 transition-all duration-500 ease-out relative"
                   style={{ width: `${(gameState.monsterHealth / gameState.maxMonsterHealth) * 100}%` }}
-                />
+                >
+                    <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
+                </div>
             </div>
           </div>
         </div>
 
-        {/* Characters (Made Larger) */}
-        <div className="absolute bottom-0 w-full h-full flex justify-between px-2 items-end pb-2">
-           <div className={`transition-all duration-300 transform ${gameState.isPlayerHit ? 'animate-shake grayscale scale-95 opacity-50' : 'translate-y-0'} relative z-10`}>
-              {/* RENDER HERO */}
+        {/* Characters */}
+        <div className="absolute bottom-6 w-full h-full flex justify-between px-6 items-end pointer-events-none">
+           {/* Player */}
+           <div className={`transition-all duration-300 transform ${gameState.isPlayerHit ? 'animate-shake grayscale brightness-50' : 'translate-y-0'} relative z-10`}>
+              <div className="absolute bottom-0 w-24 h-6 bg-black/40 blur-lg rounded-[100%]"></div>
               <img 
                   src={gameState.playerRole === 'xiaowei' ? ASSETS.ROLE_XIAOWEI : ASSETS.ROLE_XIAOYA} 
                   alt="Player" 
-                  className="w-32 h-32 md:w-48 md:h-48 object-contain filter drop-shadow-2xl" 
+                  className="w-24 h-24 md:w-32 md:h-32 object-contain filter drop-shadow-xl relative" 
               />
-              
               {gameState.comboCount > 1 && (
-                  <div className="absolute -top-6 right-0 bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full font-black text-xs animate-bounce border-2 border-white shadow-lg rotate-12">
-                      {gameState.comboCount}连击!
+                  <div className="absolute -top-6 -right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-xl font-black font-cartoon text-sm animate-bounce border-2 border-white shadow-lg rotate-12 z-20">
+                      {gameState.comboCount} 连击! 🔥
                   </div>
               )}
            </div>
 
-           <div className={`transition-all duration-300 relative z-10 flex flex-col items-center ${gameState.isMonsterHit ? 'animate-shake opacity-60 scale-90' : 'animate-bounce-slow'}`}>
+           {/* Boss */}
+           <div className={`transition-all duration-300 relative z-10 flex flex-col items-center ${gameState.isMonsterHit ? 'animate-shake opacity-60 scale-90 brightness-150' : 'animate-bounce-slow'}`}>
+             <div className="absolute bottom-0 w-32 h-8 bg-black/50 blur-xl rounded-[100%]"></div>
              <img 
                 src={currentLevel.bossIcon} 
                 alt={currentLevel.bossName}
-                className="w-40 h-40 md:w-56 md:h-56 object-contain filter drop-shadow-2xl"
+                className="w-32 h-32 md:w-40 md:h-40 object-contain filter drop-shadow-2xl relative"
              />
-             
               {gameState.isMonsterHit && (
-                <div className="absolute top-10 left-0 w-full text-center">
-                   <span className="text-6xl font-black text-white text-outline animate-pop drop-shadow-xl">POW!</span>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center z-30">
+                   <span className="text-4xl font-black text-white text-outline-lg animate-pop drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" style={{textShadow: '0 0 10px red'}}>暴击!</span>
                 </div>
               )}
            </div>
         </div>
       </div>
 
-      {/* 2. MIDDLE: QUESTION AREA (More Compact) */}
-      <div className="flex-1 p-1 md:p-2 flex flex-col justify-center bg-white relative overflow-y-auto z-0">
-          <div className="w-full max-w-lg mx-auto flex flex-col items-center">
-            <div className="mb-2 bg-yellow-100 text-yellow-800 px-3 py-0.5 rounded-full border border-yellow-300 text-[10px] font-bold uppercase tracking-wider">
-               {currentQuestion.category}
-            </div>
+      {/* 2. MAIN PANEL - Fills remaining space */}
+      <div className="flex-1 bg-[#F5F7FA] rounded-t-[30px] -mt-8 relative z-10 flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
+          
+          {/* Question Area */}
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2 flex flex-col justify-start">
             
-            <div className="text-center mb-3">
-               <h2 className="text-lg md:text-xl font-black text-slate-800 font-cartoon leading-tight px-4">
-                 {currentQuestion.text}
-               </h2>
+            {/* Category Badge - ENLARGED */}
+            <div className="flex justify-center mb-3">
+               <div className="bg-blue-100 text-blue-600 px-8 py-2 rounded-full text-2xl font-black font-cartoon tracking-widest shadow-sm border-2 border-blue-200 transform hover:scale-105 transition-transform">
+                   {currentQuestion.category}
+               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full px-6">
+            {/* Question Text */}
+            <div className="bg-white rounded-xl p-3 shadow-sm border border-slate-100 mb-4 text-center shrink-0">
+                <h2 className="text-lg md:text-xl font-bold text-slate-800 leading-snug">
+                    {currentQuestion.text}
+                </h2>
+            </div>
+
+            {/* Options - 2 COLUMNS (GRID) */}
+            <div className="grid grid-cols-2 gap-3 w-full mb-2">
                {currentQuestion.options.map((option, idx) => {
                  const isSelected = selectedOption === option;
                  const isCorrect = option === currentQuestion.correctAnswer;
-                 let btnClass = "bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300";
+                 
+                 let styleClass = "bg-white text-slate-600 border border-slate-200 shadow-[0_2px_0_#e2e8f0]";
                  
                  if (isSelected) {
-                    if (isCorrect) btnClass = "bg-green-500 border-green-600 text-white";
-                    else btnClass = "bg-red-500 border-red-600 text-white";
+                    if (isCorrect) styleClass = "bg-green-500 text-white border-green-600 shadow-[0_2px_0_#15803d]";
+                    else styleClass = "bg-red-500 text-white border-red-600 shadow-[0_2px_0_#b91c1c]";
+                 } else {
+                    styleClass += " hover:bg-slate-50 active:translate-y-[2px] active:shadow-none";
                  }
 
                  return (
@@ -232,9 +230,8 @@ export const GameView: React.FC<GameViewProps> = ({
                        onClick={() => handleOptionClick(option)}
                        disabled={!!selectedOption}
                        className={`
-                          py-3 px-3 rounded-lg border-2 text-sm md:text-base font-bold font-cartoon transition-all shadow-sm
-                          ${btnClass}
-                          ${!selectedOption ? 'active:border-b-2 active:translate-y-0.5' : ''}
+                          w-full py-3 px-2 rounded-xl text-base font-bold transition-all duration-150 flex items-center justify-center text-center leading-tight min-h-[60px]
+                          ${styleClass}
                        `}
                     >
                        {option}
@@ -243,71 +240,69 @@ export const GameView: React.FC<GameViewProps> = ({
                })}
             </div>
           </div>
-      </div>
 
-      {/* 3. BOTTOM: DECK & ENERGY (Fixed, Larger Cards) */}
-      <div className="flex-shrink-0 bg-blue-800 p-2 pb-safe border-t-4 border-blue-900 shadow-[0_-5px_15px_rgba(0,0,0,0.3)] z-20 relative">
-         
-         {/* Cards Container */}
-         <div className="flex justify-center gap-3 md:gap-5 items-end pb-3">
-            {gameState.hand.map((card, idx) => {
-               const canAfford = gameState.currentEnergy >= card.cost;
-               return (
-                 <button 
-                   key={card.uniqueId} 
-                   onClick={() => canAfford && onCardSelect(card)}
-                   disabled={!canAfford}
-                   className={`
-                      relative w-24 md:w-28 aspect-[2.5/3.5] rounded-xl border-2 shadow-lg transition-all duration-300 animate-pop
-                      bg-slate-100 overflow-hidden group
-                      ${canAfford 
-                          ? 'border-white hover:-translate-y-3 cursor-pointer active:scale-95 shadow-black/30' 
-                          : 'border-slate-500 opacity-60 grayscale cursor-not-allowed'}
-                   `}
-                 >
-                    {/* Cost Drop (Top Left) */}
-                    <div className={`absolute top-0 left-0 w-8 h-8 bg-purple-600 rounded-br-xl z-20 flex items-center justify-center border-b border-r border-white/50 shadow-md`}>
-                       <span className="text-white font-black text-lg drop-shadow-md">{card.cost}</span>
-                    </div>
-
-                    {/* Card Image Area */}
-                    <div className={`absolute inset-1 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center overflow-hidden`}>
-                       <div className="text-5xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform">{card.icon}</div>
-                    </div>
-
-                    {/* Card Value Badge (Bottom) */}
-                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md font-bold whitespace-nowrap backdrop-blur-sm border border-white/20 shadow-sm">
-                       {card.effectType === 'heal' ? `+${card.value} HP` : `-${card.value} ATK`}
-                    </div>
-                 </button>
-               );
-            })}
-         </div>
-
-         {/* Energy Bar (Bottom Overlay) */}
-         <div className="w-full max-w-md mx-auto h-7 bg-black/60 rounded-full border-2 border-black/50 relative overflow-hidden mt-1 shadow-inner">
-             <div 
-               className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600 transition-all duration-300 ease-linear shadow-[0_0_10px_rgba(192,38,211,0.5)]"
-               style={{ width: `${(gameState.currentEnergy / gameState.maxEnergy) * 100}%` }}
-             >
-                {/* Shine effect */}
-                <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
-             </div>
+          {/* 3. DECK AREA (Fixed at bottom of white panel) */}
+          <div className="flex-shrink-0 bg-indigo-50/80 border-t border-indigo-100 pb-safe pt-2 px-2 z-20">
              
-             {/* Text */}
-             <div className="absolute inset-0 flex items-center justify-center gap-2 text-white text-xs font-black tracking-widest drop-shadow-md z-10">
-                 <span className="text-purple-200">ENERGY</span>
-                 <span>{gameState.currentEnergy}/{gameState.maxEnergy}</span>
+             {/* Energy Bar - Compact */}
+             <div className="flex justify-between items-center px-4 mb-1">
+                <span className="text-xs font-bold text-slate-500 tracking-wider">我的卡牌</span>
+                <div className="flex items-center gap-2 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">
+                    <span className="text-xs">⚡</span>
+                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                           className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
+                           style={{ width: `${(gameState.currentEnergy / gameState.maxEnergy) * 100}%` }}
+                        ></div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-600">{gameState.currentEnergy}</span>
+                </div>
              </div>
-         </div>
-         
+
+             {/* Cards List */}
+             <div className="flex justify-center gap-2 overflow-x-auto pb-4 px-2 no-scrollbar">
+                {gameState.hand.map((card, idx) => {
+                   const canAfford = gameState.currentEnergy >= card.cost;
+                   return (
+                     <button 
+                       key={card.uniqueId} 
+                       onClick={() => canAfford && onCardSelect(card)}
+                       disabled={!canAfford}
+                       className={`
+                          flex-shrink-0 relative w-16 aspect-[3/4] rounded-lg transition-all duration-300
+                          ${canAfford 
+                              ? 'hover:-translate-y-2 cursor-pointer shadow-md' 
+                              : 'opacity-40 grayscale cursor-not-allowed'}
+                       `}
+                     >
+                        <div className={`absolute inset-0 rounded-lg bg-gradient-to-br ${card.color} p-0.5`}>
+                            <div className="w-full h-full bg-white rounded-[6px] flex flex-col items-center justify-center relative overflow-hidden">
+                                {/* Cost */}
+                                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-slate-800 rounded-full flex items-center justify-center z-10">
+                                    <span className="text-white font-bold text-[8px]">{card.cost}</span>
+                                </div>
+                                
+                                <div className="text-2xl mb-0.5">{card.icon}</div>
+                                <div className="text-[8px] font-bold text-slate-700 bg-slate-100 px-1 py-0 rounded-full whitespace-nowrap overflow-hidden max-w-[90%] text-center">
+                                    {card.name}
+                                </div>
+                            </div>
+                        </div>
+                     </button>
+                   );
+                })}
+             </div>
+          </div>
       </div>
 
       {/* Feedback Overlay */}
       {gameState.feedbackMessage && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none w-full px-4 text-center">
-            <div className={`inline-block px-6 py-4 rounded-2xl border-4 border-white shadow-2xl animate-pop ${gameState.feedbackType === 'success' ? 'bg-green-500 rotate-2' : 'bg-red-500 -rotate-2'}`}>
-                <span className="text-2xl font-black text-white font-cartoon text-outline">
+            <div className={`
+                inline-block px-6 py-3 rounded-2xl border-4 border-white shadow-2xl animate-pop backdrop-blur-md
+                ${gameState.feedbackType === 'success' ? 'bg-green-500' : 'bg-red-500'}
+            `}>
+                <span className="text-2xl font-black text-white font-cartoon">
                   {gameState.feedbackMessage}
                 </span>
             </div>

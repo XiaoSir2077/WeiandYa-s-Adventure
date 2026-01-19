@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TOTAL_QUESTIONS, ASSETS } from '../constants';
 import { PlayerRole } from '../types';
 
@@ -6,7 +6,7 @@ interface ResultViewProps {
   score: number;
   monsterHealth: number;
   isGameOver?: boolean;
-  playerRole: PlayerRole; // Added prop
+  playerRole: PlayerRole; 
   knowledgeCollected: string[];
   onRestart: () => void;
 }
@@ -16,6 +16,23 @@ export const ResultView: React.FC<ResultViewProps> = ({ score, monsterHealth, is
   // Calculate stars based on score (Simple logic for demo)
   const stars = isGameOver ? 0 : (score === TOTAL_QUESTIONS ? 3 : score >= 3 ? 2 : 1);
   const bgImage = isWin ? ASSETS.BG_VICTORY : ASSETS.BG_GAME_OVER;
+
+  // High Score State
+  const [highScore, setHighScore] = useState(0);
+  const [isNewRecord, setIsNewRecord] = useState(false);
+
+  useEffect(() => {
+    // Logic to handle High Score persistence
+    const storedHighScore = localStorage.getItem('knowledge_game_highscore');
+    let currentHigh = storedHighScore ? parseInt(storedHighScore, 10) : 0;
+
+    if (score > currentHigh) {
+        currentHigh = score;
+        localStorage.setItem('knowledge_game_highscore', score.toString());
+        setIsNewRecord(true);
+    }
+    setHighScore(currentHigh);
+  }, [score]);
 
   // Narrative Text
   const getWinnerText = () => {
@@ -57,6 +74,19 @@ export const ResultView: React.FC<ResultViewProps> = ({ score, monsterHealth, is
         
         {/* Stats Card */}
         <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border-b-8 border-slate-200 mb-6">
+           {/* High Score Badge */}
+           <div className="flex justify-center mb-4">
+              <div className="bg-amber-100 border border-amber-200 rounded-full px-4 py-1 flex items-center gap-2">
+                  <span className="text-xl">👑</span>
+                  <span className="text-amber-700 font-bold text-sm">历史最高: {highScore}</span>
+                  {isNewRecord && (
+                      <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse ml-1">
+                          新纪录!
+                      </span>
+                  )}
+              </div>
+           </div>
+
            <div className="flex justify-center gap-2 mb-4">
               {[1, 2, 3].map(i => (
                  <span key={i} className={`text-4xl filter drop-shadow-sm transition-all duration-500 ${i <= stars && isWin ? 'grayscale-0 scale-110' : 'grayscale opacity-30'}`}>
