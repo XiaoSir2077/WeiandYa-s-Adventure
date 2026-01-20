@@ -1,7 +1,8 @@
+
 export enum GameStage {
   START = 'START',
   PLAYING = 'PLAYING',
-  CARD_SELECT = 'CARD_SELECT', // Deprecated in new logic but kept for type safety if needed
+  CARD_SELECT = 'CARD_SELECT', 
   LEVEL_TRANSITION = 'LEVEL_TRANSITION',
   GAME_OVER = 'GAME_OVER', 
   RESULT = 'RESULT'
@@ -11,7 +12,7 @@ export type PlayerRole = 'xiaowei' | 'xiaoya';
 
 export type ElementType = 'physical' | 'fire' | 'water' | 'nature' | 'light' | 'dark' | 'heal';
 
-export type CardEffect = 'damage' | 'heal';
+export type CardEffect = 'damage' | 'heal' | 'defense'; // Added defense
 
 export interface LevelConfig {
   levelNumber: number;
@@ -20,9 +21,10 @@ export interface LevelConfig {
   bossIcon: string;
   bossHealth: number;
   bgGradient: string;
-  bgImage: string; // New field for background image
+  bgImage: string; 
   themeColor: string;
   element: ElementType;
+  monsterAttackInterval: number; 
 }
 
 export interface Question {
@@ -39,13 +41,14 @@ export interface Card {
   name: string;
   description: string;
   value: number; 
-  cost: number; // New: Energy cost
+  cost: number; 
   effectType: CardEffect; 
   rarity: 'common' | 'rare' | 'legendary';
   icon: string;
   color: string;
   animationClass: string;
   element: ElementType;
+  allowedRoles?: PlayerRole[]; // New: Restrict cards to specific roles
 }
 
 export interface HandCard extends Card {
@@ -62,15 +65,25 @@ export interface GameState {
   maxMonsterHealth: number;
   playerHealth: number; 
   maxPlayerHealth: number; 
-  currentEnergy: number; // New: Current Energy points
-  maxEnergy: number; // New: Max Energy points
+  
+  // --- New Player Stats ---
+  playerArmor: number; // New: Armor value
+  maxArmor: number;
+  currentEnergy: number; 
+  maxEnergy: number; 
+  heroSkillCooldown: number; // New: Seconds remaining
+  
   comboCount: number; 
   isMonsterHit: boolean;
   isPlayerHit: boolean;
   feedbackMessage: string | null;
   feedbackType: 'success' | 'error' | null;
-  hand: HandCard[]; // New: Cards currently available to play
-  availableCards: Card[]; // Deprecated, replaced by hand
+  hand: HandCard[]; 
+  availableCards: Card[]; 
   knowledgeCollected: string[];
   questions: Question[]; 
+  
+  monsterAttackProgress: number; 
+  isPlayerStunned: boolean; 
+  levelTimeRemaining: number; 
 }

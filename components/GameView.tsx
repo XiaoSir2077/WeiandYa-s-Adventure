@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Question, GameState, GameStage, Card, LevelConfig, ElementType } from '../types';
-import { ASSETS } from '../constants';
+import { ASSETS, MAX_ARMOR, HERO_SKILL_COOLDOWN } from '../constants';
 
 interface GameViewProps {
   currentQuestion: Question;
@@ -9,6 +10,7 @@ interface GameViewProps {
   onAnswer: (isCorrect: boolean) => void;
   onCardSelect: (card: Card) => void;
   onNextLevel: () => void;
+  onHeroSkill: () => void;
 }
 
 export const GameView: React.FC<GameViewProps> = ({ 
@@ -17,11 +19,16 @@ export const GameView: React.FC<GameViewProps> = ({
   currentLevel,
   onAnswer,
   onCardSelect,
-  onNextLevel
+  onNextLevel,
+  onHeroSkill
 }) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showBossIntro, setShowBossIntro] = useState(false);
   
+  // Animation state for Energy changes
+  const prevEnergyRef = useRef(gameState.currentEnergy);
+  const [energyAnimation, setEnergyAnimation] = useState<'none' | 'spend' | 'gain'>('none');
+
   useEffect(() => {
     setSelectedOption(null);
   }, [currentQuestion.id, gameState.currentLevelIndex]);
@@ -34,11 +41,31 @@ export const GameView: React.FC<GameViewProps> = ({
       return () => clearTimeout(timer);
   }, [currentLevel.levelNumber]);
 
+  // Effect to trigger energy animations
+  useEffect(() => {
+      if (gameState.currentEnergy < prevEnergyRef.current) {
+          setEnergyAnimation('spend');
+          const timer = setTimeout(() => setEnergyAnimation('none'), 400);
+          return () => clearTimeout(timer);
+      } else if (gameState.currentEnergy > prevEnergyRef.current) {
+          setEnergyAnimation('gain');
+          const timer = setTimeout(() => setEnergyAnimation('none'), 400);
+          return () => clearTimeout(timer);
+      }
+      prevEnergyRef.current = gameState.currentEnergy;
+  }, [gameState.currentEnergy]);
+
   const handleOptionClick = (option: string) => {
-    if (selectedOption || gameState.feedbackMessage) return;
+    if (selectedOption || gameState.feedbackMessage || gameState.isPlayerStunned) return;
     setSelectedOption(option);
     const isCorrect = option === currentQuestion.correctAnswer;
     onAnswer(isCorrect);
+  };
+
+  const formatTime = (seconds: number) => {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   // --- LEVEL COMPLETE SCREEN ---
@@ -120,31 +147,65 @@ export const GameView: React.FC<GameViewProps> = ({
         {/* HUD: Top Bar */}
         <div className="absolute top-0 w-full p-2 pt-3 flex justify-between items-start z-20">
           
-          {/* Player Health */}
+          {/* PLAYER HUD (Top Left) */}
           <div className="flex flex-col items-start gap-1">
-              <div className="flex items-center gap-1 bg-black/50 p-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-lg">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-inner border border-red-300">
-                     <span className="text-sm">❤️</span>
+              <div className="flex flex-col gap-1 bg-black/50 p-2 rounded-xl border border-white/20 backdrop-blur-md shadow-lg min-w-[140px]">
+                  
+                  {/* Row 1: Health */}
+                  <div className="flex items-center gap-2">
+                     <span className="text-lg">❤️</span>
+                     <div className="flex gap-1">
+                        {[...Array(gameState.maxPlayerHealth)].map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`w-3 h-4 rounded-sm border border-white/30 transition-all duration-300 ${i < gameState.playerHealth ? 'bg-red-500 shadow-[0_0_5px_red]' : 'bg-slate-700/50'}`}
+                            ></div>
+                        ))}
+                     </div>
                   </div>
-                  <div className="flex px-2 gap-1">
-                    {[...Array(gameState.maxPlayerHealth)].map((_, i) => (
+
+                  {/* Row 2: Armor */}
+                  <div className="flex items-center gap-2">
+                     <span className="text-lg">🛡️</span>
+                     <div className="flex gap-1">
+                        {[...Array(MAX_ARMOR)].map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`w-3 h-4 rounded-sm border border-white/30 transition-all duration-300 ${i < gameState.playerArmor ? 'bg-slate-300 shadow-[0_0_5px_white]' : 'bg-slate-700/50'}`}
+                            ></div>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* Row 3: Energy (Mana) */}
+                  <div className={`flex items-center gap-2 transition-all duration-200 ${energyAnimation === 'spend' ? 'animate-shake brightness-125' : ''} ${energyAnimation === 'gain' ? 'scale-105' : ''}`}>
+                     <span className="text-lg">⚡</span>
+                     <div className={`flex-1 h-3 bg-slate-900 rounded-full border overflow-hidden relative transition-colors duration-200 ${energyAnimation === 'spend' ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : (energyAnimation === 'gain' ? 'border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]' : 'border-slate-600')}`}>
                         <div 
-                          key={i} 
-                          className={`w-3 h-6 rounded-sm border border-white/30 transition-all duration-300 ${i < gameState.playerHealth ? 'bg-gradient-to-t from-red-600 to-red-400 shadow-[0_0_8px_rgba(220,38,38,0.8)]' : 'bg-slate-700/50'}`}
+                            className={`h-full transition-all duration-300 ${energyAnimation === 'spend' ? 'bg-red-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}
+                            style={{ width: `${(gameState.currentEnergy / gameState.maxEnergy) * 100}%` }}
                         ></div>
-                    ))}
+                        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white text-shadow">{gameState.currentEnergy}/{gameState.maxEnergy}</span>
+                     </div>
                   </div>
+
               </div>
           </div>
 
-          {/* Boss Health */}
-          <div className="flex flex-col items-end w-[50%]">
+          {/* TIMER HUD */}
+          <div className={`absolute left-1/2 -translate-x-1/2 top-4 px-4 py-1 rounded-lg border-2 font-mono font-bold text-xl flex items-center gap-2 shadow-lg ${gameState.levelTimeRemaining < 30 ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-black/40 border-white/20 text-white backdrop-blur'}`}>
+               <span>⏰</span>
+               {formatTime(gameState.levelTimeRemaining)}
+          </div>
+
+          {/* Boss Health & Attack Bar */}
+          <div className="flex flex-col items-end w-[40%]">
             <div className="flex items-center gap-2 mb-1 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
                <span className="text-white font-cartoon text-sm font-black drop-shadow-md tracking-wide">{currentLevel.bossName}</span>
                <img src={currentLevel.bossIcon} className="w-5 h-5 object-contain" alt="boss-icon" />
             </div>
             {/* Glossy HP Bar */}
-            <div className="w-full h-4 bg-slate-900/80 rounded-full border border-slate-600 overflow-hidden relative shadow-lg">
+            <div className="w-full h-4 bg-slate-900/80 rounded-full border border-slate-600 overflow-hidden relative shadow-lg mb-1">
                 <div 
                   className="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 transition-all duration-500 ease-out relative"
                   style={{ width: `${(gameState.monsterHealth / gameState.maxMonsterHealth) * 100}%` }}
@@ -152,24 +213,67 @@ export const GameView: React.FC<GameViewProps> = ({
                     <div className="absolute top-0 left-0 w-full h-[40%] bg-white/30 rounded-t-full"></div>
                 </div>
             </div>
+            {/* Monster Action Bar (ATB) */}
+            <div className="w-[80%] h-2 bg-slate-800 rounded-full border border-slate-600 overflow-hidden relative shadow">
+                 <div 
+                   className="h-full bg-red-500 transition-all duration-100 ease-linear"
+                   style={{ width: `${gameState.monsterAttackProgress}%` }}
+                 ></div>
+                 {/* Warning Icon if near full */}
+                 {gameState.monsterAttackProgress > 80 && (
+                     <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[8px] animate-ping">⚠️</div>
+                 )}
+            </div>
           </div>
         </div>
 
         {/* Characters */}
         <div className="absolute bottom-6 w-full h-full flex justify-between px-6 items-end pointer-events-none">
-           {/* Player */}
-           <div className={`transition-all duration-300 transform ${gameState.isPlayerHit ? 'animate-shake grayscale brightness-50' : 'translate-y-0'} relative z-10`}>
-              <div className="absolute bottom-0 w-24 h-6 bg-black/40 blur-lg rounded-[100%]"></div>
-              <img 
-                  src={gameState.playerRole === 'xiaowei' ? ASSETS.ROLE_XIAOWEI : ASSETS.ROLE_XIAOYA} 
-                  alt="Player" 
-                  className="w-24 h-24 md:w-32 md:h-32 object-contain filter drop-shadow-xl relative" 
-              />
-              {gameState.comboCount > 1 && (
-                  <div className="absolute -top-6 -right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-xl font-black font-cartoon text-sm animate-bounce border-2 border-white shadow-lg rotate-12 z-20">
-                      {gameState.comboCount} 连击! 🔥
+           {/* Player Avatar */}
+           <div className={`transition-all duration-300 transform ${gameState.isPlayerHit ? 'animate-shake grayscale brightness-50' : 'translate-y-0'} relative z-10 flex items-end`}>
+              
+              {/* HERO SKILL BUTTON (Next to Avatar) */}
+              <div className="pointer-events-auto mr-4 mb-4 relative group">
+                  <button 
+                    onClick={onHeroSkill}
+                    disabled={gameState.heroSkillCooldown > 0 || gameState.isPlayerStunned}
+                    className={`
+                        w-16 h-16 rounded-full border-4 shadow-xl transition-all duration-200 flex items-center justify-center relative overflow-hidden
+                        ${gameState.heroSkillCooldown > 0 || gameState.isPlayerStunned
+                            ? 'bg-slate-600 border-slate-400 grayscale' 
+                            : 'bg-gradient-to-br from-yellow-400 to-orange-500 border-yellow-200 animate-pulse hover:scale-110 active:scale-95 cursor-pointer'}
+                    `}
+                  >
+                      <span className="text-3xl filter drop-shadow-md">
+                        {gameState.playerRole === 'xiaowei' ? '🛡️' : '🪄'}
+                      </span>
+                      
+                      {/* Cooldown Overlay */}
+                      {gameState.heroSkillCooldown > 0 && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">{Math.ceil(gameState.heroSkillCooldown)}</span>
+                          </div>
+                      )}
+                  </button>
+                  {/* Skill Label */}
+                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap">
+                      {gameState.playerRole === 'xiaowei' ? '勇气护盾' : '魔力爆发'}
                   </div>
-              )}
+              </div>
+
+              <div className="relative">
+                  <div className="absolute bottom-0 w-24 h-6 bg-black/40 blur-lg rounded-[100%]"></div>
+                  <img 
+                      src={gameState.playerRole === 'xiaowei' ? ASSETS.ROLE_XIAOWEI : ASSETS.ROLE_XIAOYA} 
+                      alt="Player" 
+                      className="w-24 h-24 md:w-32 md:h-32 object-contain filter drop-shadow-xl relative" 
+                  />
+                  {gameState.comboCount > 1 && (
+                      <div className="absolute -top-6 -right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-xl font-black font-cartoon text-sm animate-bounce border-2 border-white shadow-lg rotate-12 z-20">
+                          {gameState.comboCount} 连击! 🔥
+                      </div>
+                  )}
+              </div>
            </div>
 
            {/* Boss */}
@@ -192,6 +296,17 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* 2. MAIN PANEL - Fills remaining space */}
       <div className="flex-1 bg-[#F5F7FA] rounded-t-[30px] -mt-8 relative z-10 flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
           
+          {/* STUN OVERLAY */}
+          {gameState.isPlayerStunned && (
+              <div className="absolute inset-0 z-40 bg-slate-800/60 backdrop-blur-[2px] flex items-center justify-center animate-fade-in">
+                  <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center animate-shake">
+                      <div className="text-4xl animate-spin mb-2">💫</div>
+                      <h3 className="text-xl font-black text-slate-800">晕眩中...</h3>
+                      <p className="text-slate-500 text-sm">怪兽攻击了你！</p>
+                  </div>
+              </div>
+          )}
+
           {/* Question Area */}
           <div className="flex-1 overflow-y-auto px-4 pt-6 pb-2 flex flex-col justify-start">
             
@@ -228,10 +343,11 @@ export const GameView: React.FC<GameViewProps> = ({
                     <button
                        key={option}
                        onClick={() => handleOptionClick(option)}
-                       disabled={!!selectedOption}
+                       disabled={!!selectedOption || gameState.isPlayerStunned}
                        className={`
                           w-full py-3 px-2 rounded-xl text-base font-bold transition-all duration-150 flex items-center justify-center text-center leading-tight min-h-[60px]
                           ${styleClass}
+                          ${gameState.isPlayerStunned ? 'opacity-50 cursor-not-allowed' : ''}
                        `}
                     >
                        {option}
@@ -242,48 +358,38 @@ export const GameView: React.FC<GameViewProps> = ({
           </div>
 
           {/* 3. DECK AREA (Fixed at bottom of white panel) */}
-          <div className="flex-shrink-0 bg-indigo-50/80 border-t border-indigo-100 pb-safe pt-2 px-2 z-20">
+          <div className="flex-shrink-0 bg-indigo-50/80 border-t border-indigo-100 pb-safe pt-2 px-2 z-20 shadow-[inset_0_4px_10px_rgba(0,0,0,0.05)]">
              
-             {/* Energy Bar - Compact */}
-             <div className="flex justify-between items-center px-4 mb-1">
-                <span className="text-xs font-bold text-slate-500 tracking-wider">我的卡牌</span>
-                <div className="flex items-center gap-2 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">
-                    <span className="text-xs">⚡</span>
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                           className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
-                           style={{ width: `${(gameState.currentEnergy / gameState.maxEnergy) * 100}%` }}
-                        ></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-600">{gameState.currentEnergy}</span>
-                </div>
-             </div>
-
              {/* Cards List */}
-             <div className="flex justify-center gap-2 overflow-x-auto pb-4 px-2 no-scrollbar">
+             <div className="flex justify-center gap-3 overflow-x-auto pb-4 px-2 no-scrollbar pt-2">
                 {gameState.hand.map((card, idx) => {
                    const canAfford = gameState.currentEnergy >= card.cost;
                    return (
                      <button 
                        key={card.uniqueId} 
                        onClick={() => canAfford && onCardSelect(card)}
-                       disabled={!canAfford}
+                       disabled={!canAfford || gameState.isPlayerStunned}
                        className={`
                           flex-shrink-0 relative w-16 aspect-[3/4] rounded-lg transition-all duration-300
-                          ${canAfford 
-                              ? 'hover:-translate-y-2 cursor-pointer shadow-md' 
-                              : 'opacity-40 grayscale cursor-not-allowed'}
+                          ${canAfford && !gameState.isPlayerStunned
+                              ? 'hover:-translate-y-3 cursor-pointer shadow-xl ring-2 ring-yellow-400 scale-105 brightness-110 z-10' // Highlighting Effect
+                              : 'opacity-60 grayscale cursor-not-allowed scale-95'}
                        `}
                      >
                         <div className={`absolute inset-0 rounded-lg bg-gradient-to-br ${card.color} p-0.5`}>
-                            <div className="w-full h-full bg-white rounded-[6px] flex flex-col items-center justify-center relative overflow-hidden">
+                            {/* Glow Effect for Affordable Cards */}
+                            {canAfford && !gameState.isPlayerStunned && (
+                                <div className="absolute inset-0 bg-yellow-400 blur-md opacity-50 animate-pulse"></div>
+                            )}
+
+                            <div className="w-full h-full bg-white rounded-[6px] flex flex-col items-center justify-center relative overflow-hidden z-10">
                                 {/* Cost */}
-                                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-slate-800 rounded-full flex items-center justify-center z-10">
-                                    <span className="text-white font-bold text-[8px]">{card.cost}</span>
+                                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full flex items-center justify-center z-20 shadow-sm border border-white ${canAfford ? 'bg-blue-600 text-white' : 'bg-slate-400 text-slate-100'}`}>
+                                    <span className="font-bold text-[10px]">{card.cost}</span>
                                 </div>
                                 
-                                <div className="text-2xl mb-0.5">{card.icon}</div>
-                                <div className="text-[8px] font-bold text-slate-700 bg-slate-100 px-1 py-0 rounded-full whitespace-nowrap overflow-hidden max-w-[90%] text-center">
+                                <div className="text-3xl mb-1 filter drop-shadow-sm">{card.icon}</div>
+                                <div className="text-[9px] font-bold text-slate-700 bg-slate-100/90 px-1.5 py-0.5 rounded-full whitespace-nowrap overflow-hidden max-w-[95%] text-center border border-slate-200">
                                     {card.name}
                                 </div>
                             </div>

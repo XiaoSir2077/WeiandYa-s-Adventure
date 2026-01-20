@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StartView } from './components/StartView';
 import { GameView } from './components/GameView';
 import { ResultView } from './components/ResultView';
-import { QUESTIONS, LEVELS, CARDS, MAX_PLAYER_HEALTH, MAX_ENERGY, ASSETS } from './constants';
+import { QUESTIONS, LEVELS, CARDS, MAX_PLAYER_HEALTH, MAX_ENERGY, ASSETS, BASIC_ATTACK_DAMAGE, STUN_DURATION, LEVEL_TIME_LIMIT, MONSTER_RAGE_PER_MISTAKE, MAX_ARMOR, HERO_SKILL_COOLDOWN } from './constants';
 import { GameState, GameStage, Card, PlayerRole, ElementType, Question, HandCard } from './types';
 
 // Helper: Fisher-Yates Shuffle
@@ -23,7 +23,6 @@ const createHandCard = (card: Card): HandCard => {
   };
 };
 
-// Modified to use the specific game session's randomized questions
 const getCurrentQuestion = (gameState: GameState) => {
   const { questions, currentQuestionIndex } = gameState;
   if (!questions || questions.length === 0) return QUESTIONS[0];
@@ -33,7 +32,7 @@ const getCurrentQuestion = (gameState: GameState) => {
 
 // Elemental Effectiveness Logic
 const getDamageAnalysis = (cardEl: ElementType, bossEl: ElementType, baseDamage: number): { finalDamage: number, text: string, type: 'normal' | 'weak' | 'resist' } => {
-    if (cardEl === 'heal') return { finalDamage: 0, text: '恢复', type: 'normal' };
+    if (cardEl === 'heal') return { finalDamage: 0, text: '辅助', type: 'normal' };
 
     let multiplier = 1;
     let text = "命中!";
@@ -68,8 +67,11 @@ export default function App() {
     maxMonsterHealth: 10,
     playerHealth: MAX_PLAYER_HEALTH,
     maxPlayerHealth: MAX_PLAYER_HEALTH,
+    playerArmor: 0,
+    maxArmor: MAX_ARMOR,
     currentEnergy: 0,
     maxEnergy: MAX_ENERGY,
+    heroSkillCooldown: 0,
     comboCount: 0,
     isMonsterHit: false,
     isPlayerHit: false,
@@ -78,32 +80,31 @@ export default function App() {
     hand: [],
     availableCards: [],
     knowledgeCollected: [],
-    questions: [], 
+    questions: [],
+    monsterAttackProgress: 0,
+    isPlayerStunned: false,
+    levelTimeRemaining: LEVEL_TIME_LIMIT 
   });
 
-  // --- AUDIO MANAGER ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const gameStateRef = useRef(gameState);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
   // Initialize Audio
   useEffect(() => {
     audioRef.current = new Audio(ASSETS.BGM_MENU);
     audioRef.current.loop = true;
-    audioRef.current.volume = 0.5; // Set volume to 50%
+    audioRef.current.volume = 0.5; 
 
-    // Attempt autoplay, if blocked, wait for first click
     const playAudio = () => {
-        audioRef.current?.play().catch(() => {
-            // Autoplay blocked
-        });
+        audioRef.current?.play().catch(() => {});
     };
-
     playAudio();
 
     const handleFirstInteraction = () => {
         playAudio();
         document.removeEventListener('click', handleFirstInteraction);
     };
-
     document.addEventListener('click', handleFirstInteraction);
 
     return () => {
@@ -115,21 +116,16 @@ export default function App() {
     };
   }, []);
 
-  // Handle BGM Switching based on GameStage
+  // Handle BGM Switching
   useEffect(() => {
     if (!audioRef.current) return;
-
-    // Define which stage uses Battle music
     const isBattleStage = gameState.stage === GameStage.PLAYING || 
                           gameState.stage === GameStage.LEVEL_TRANSITION ||
                           gameState.stage === GameStage.GAME_OVER ||
                           gameState.stage === GameStage.RESULT;
-
     const targetSrc = isBattleStage ? ASSETS.BGM_BATTLE : ASSETS.BGM_MENU;
 
-    // Only switch if source is different to avoid restarting
     if (audioRef.current.src !== targetSrc) {
-        // Simple crossfade hack: lower volume, switch, raise volume
         audioRef.current.volume = 0.2;
         setTimeout(() => {
             if (audioRef.current) {
@@ -140,6 +136,31 @@ export default function App() {
         }, 200);
     }
   }, [gameState.stage]);
+
+  // --- MAIN GAME LOOP (Timer & CD) ---
+  useEffect(() => {
+    let intervalId: any;
+
+    if (gameState.stage === GameStage.PLAYING) {
+        intervalId = setInterval(() => {
+            setGameState(prev => {
+                // Time Check
+                if (prev.levelTimeRemaining <= 0) {
+                     return { ...prev, stage: GameStage.GAME_OVER, feedbackMessage: "时间到!", feedbackType: 'error' };
+                }
+                return {
+                    ...prev,
+                    levelTimeRemaining: prev.levelTimeRemaining - 1,
+                    heroSkillCooldown: Math.max(0, prev.heroSkillCooldown - 1)
+                };
+            });
+        }, 1000);
+    }
+
+    return () => clearInterval(intervalId);
+  }, [gameState.stage]); 
+
+
   // ---------------------
 
   const startLevel = (
@@ -151,13 +172,19 @@ export default function App() {
     currentHealth: number,
     levelQuestions: Question[],
     currentEnergy: number,
-    currentHand: HandCard[]
+    currentHand: HandCard[],
+    currentArmor: number
   ) => {
     const levelConfig = LEVELS[levelIndex];
-    // If hand is empty (first start), deal 4 cards
-    const initialHand = currentHand.length > 0 
-        ? currentHand 
-        : shuffleArray(CARDS).slice(0, 4).map(createHandCard);
+    
+    // Filter Cards by Role
+    const roleCards = CARDS.filter(c => !c.allowedRoles || c.allowedRoles.includes(role));
+    
+    // Deal Hand if empty
+    let newHand = currentHand;
+    if (newHand.length === 0) {
+        newHand = shuffleArray(roleCards).slice(0, 4).map(createHandCard);
+    }
 
     setGameState({
       stage: GameStage.PLAYING,
@@ -169,24 +196,29 @@ export default function App() {
       maxMonsterHealth: levelConfig.bossHealth,
       playerHealth: currentHealth, 
       maxPlayerHealth: MAX_PLAYER_HEALTH,
+      playerArmor: currentArmor,
+      maxArmor: MAX_ARMOR,
       currentEnergy: currentEnergy,
       maxEnergy: MAX_ENERGY,
+      heroSkillCooldown: 0,
       comboCount: 0,
       isMonsterHit: false,
       isPlayerHit: false,
       feedbackMessage: null,
       feedbackType: null,
-      hand: initialHand,
-      availableCards: [],
+      hand: newHand,
+      availableCards: roleCards, // Store available pool
       knowledgeCollected: knowledge,
-      questions: levelQuestions
+      questions: levelQuestions,
+      monsterAttackProgress: 0,
+      isPlayerStunned: false,
+      levelTimeRemaining: LEVEL_TIME_LIMIT
     });
   };
 
   const startGame = (role: PlayerRole) => {
-    // Randomize questions at the start of the game
     const shuffledQuestions = shuffleArray(QUESTIONS);
-    startLevel(0, 0, [], role, 0, MAX_PLAYER_HEALTH, shuffledQuestions, 0, []);
+    startLevel(0, 0, [], role, 0, MAX_PLAYER_HEALTH, shuffledQuestions, 0, [], 0);
   };
 
   const handleNextLevel = () => {
@@ -199,63 +231,167 @@ export default function App() {
       gameState.currentQuestionIndex + 1,
       gameState.playerHealth,
       gameState.questions,
-      gameState.currentEnergy, // Carry over energy
-      gameState.hand // Carry over hand
+      gameState.currentEnergy, 
+      gameState.hand,
+      gameState.playerArmor // Carry over armor
     );
   };
 
+  // ROGUELIKE ITEM DROP
+  const triggerItemDrop = (currentGameState: GameState): Partial<GameState> => {
+     const rand = Math.random();
+     let msg = '';
+     let updates: Partial<GameState> = {};
+
+     if (rand < 0.4) {
+         msg = "获得道具: 时间沙漏 ⏳ (+30s)";
+         updates = { levelTimeRemaining: currentGameState.levelTimeRemaining + 30 };
+     } else if (rand < 0.7) {
+         msg = "获得道具: 能量药水 🧪 (+5 ⚡)";
+         updates = { currentEnergy: Math.min(currentGameState.currentEnergy + 5, MAX_ENERGY) };
+     } else {
+         msg = "获得道具: 急救包 💊 (+1 ❤️)";
+         updates = { playerHealth: Math.min(currentGameState.playerHealth + 1, MAX_PLAYER_HEALTH) };
+     }
+
+     return { ...updates, feedbackMessage: msg, feedbackType: 'success' };
+  };
+
+  // --- HERO SKILL LOGIC ---
+  const handleHeroSkill = () => {
+    if (gameState.heroSkillCooldown > 0 || gameState.isPlayerStunned) return;
+
+    if (gameState.playerRole === 'xiaowei') {
+        // Courage Shield
+        setGameState(prev => ({
+            ...prev,
+            playerArmor: Math.min(prev.playerArmor + 3, prev.maxArmor),
+            heroSkillCooldown: HERO_SKILL_COOLDOWN,
+            feedbackMessage: "勇气爆发! 护甲 +3",
+            feedbackType: 'success'
+        }));
+    } else {
+        // Wisdom Surge
+        const roleCards = gameState.availableCards;
+        const newHand = shuffleArray(roleCards).slice(0, 4).map(createHandCard);
+        
+        setGameState(prev => ({
+            ...prev,
+            currentEnergy: Math.min(prev.currentEnergy + 5, prev.maxEnergy),
+            hand: newHand,
+            heroSkillCooldown: HERO_SKILL_COOLDOWN,
+            feedbackMessage: "魔力涌动! 能量 +5 & 手牌刷新",
+            feedbackType: 'success'
+        }));
+    }
+
+    setTimeout(() => {
+        setGameState(prev => ({ ...prev, feedbackMessage: null }));
+    }, 1500);
+  };
+
   const handleAnswer = (isCorrect: boolean) => {
+    if (gameState.isPlayerStunned) return;
+
     if (isCorrect) {
+      // Basic Attack Logic
       const currentQ = getCurrentQuestion(gameState);
       const newCombo = gameState.comboCount + 1;
-      
-      // Energy Logic: +2 for 3+ combo, otherwise +1
       const energyGain = newCombo >= 3 ? 2 : 1;
       
-      let feedback = `能量 +${energyGain}`;
-      if (newCombo >= 3) feedback = `三连对！能量 +${energyGain}`;
+      let feedback = `平A! 伤害 ${BASIC_ATTACK_DAMAGE} 能量 +${energyGain}`;
+      let extraUpdates: Partial<GameState> = {};
 
-      setGameState(prev => ({
-        ...prev,
-        score: prev.score + 1,
-        currentEnergy: Math.min(prev.currentEnergy + energyGain, prev.maxEnergy), // Use calculated gain
-        comboCount: newCombo,
-        feedbackMessage: feedback,
-        feedbackType: 'success',
-        stage: GameStage.PLAYING, // Stay in playing
-        currentQuestionIndex: prev.currentQuestionIndex + 1, // Next Question immediately
-        knowledgeCollected: [...prev.knowledgeCollected, `${currentQ.category}: ${currentQ.knowledgePoint}`]
-      }));
+      if (newCombo % 5 === 0) {
+          const itemEffects = triggerItemDrop({ ...gameState, comboCount: newCombo });
+          extraUpdates = itemEffects;
+          feedback = itemEffects.feedbackMessage || feedback; 
+      } else if (newCombo >= 3) {
+          feedback = `三连击! 伤害 ${BASIC_ATTACK_DAMAGE} 能量 +${energyGain}`;
+      }
 
-      // Short feedback duration
+      setGameState(prev => {
+          const newMonsterHealth = prev.monsterHealth - BASIC_ATTACK_DAMAGE;
+          const isDead = newMonsterHealth <= 0;
+
+          if (isDead) {
+             setTimeout(() => {
+                setGameState(curr => {
+                    if (curr.currentLevelIndex < LEVELS.length - 1) {
+                         return { ...curr, stage: GameStage.LEVEL_TRANSITION };
+                    }
+                    return { ...curr, stage: GameStage.RESULT };
+                })
+             }, 500);
+          }
+
+          return {
+            ...prev,
+            score: prev.score + 1,
+            currentEnergy: Math.min(prev.currentEnergy + energyGain, prev.maxEnergy), 
+            comboCount: newCombo,
+            monsterHealth: Math.max(0, newMonsterHealth),
+            isMonsterHit: true,
+            feedbackMessage: feedback,
+            feedbackType: 'success',
+            currentQuestionIndex: prev.currentQuestionIndex + 1, 
+            knowledgeCollected: [...prev.knowledgeCollected, `${currentQ.category}: ${currentQ.knowledgePoint}`],
+            ...extraUpdates 
+          }
+      });
+
       setTimeout(() => {
-        setGameState(prev => ({ ...prev, feedbackMessage: null }));
-      }, 1000);
+        setGameState(prev => ({ ...prev, isMonsterHit: false, feedbackMessage: null }));
+      }, 1500);
 
     } else {
-      // Wrong Answer Logic: Boss Attacks
+      // Wrong Answer Logic: Stun + Rage Increase
       setGameState(prev => {
-        const newHealth = prev.playerHealth - 1;
+        let newRage = prev.monsterAttackProgress + MONSTER_RAGE_PER_MISTAKE;
+        let newHealth = prev.playerHealth;
+        let newArmor = prev.playerArmor;
+        let msg = "答错了! 怪兽怒气上升!";
+        let isHit = false;
+
+        if (newRage >= 100) {
+            newRage = 0;
+            const damage = 1;
+            
+            // Armor Absorb Logic
+            if (newArmor >= damage) {
+                newArmor -= damage;
+                msg = "护甲抵挡了攻击! 🛡️";
+            } else {
+                const remainingDmg = damage - newArmor;
+                newArmor = 0;
+                newHealth -= remainingDmg;
+                msg = `怪兽怒气爆发! -${remainingDmg} ❤️`;
+            }
+            isHit = true;
+        }
+
         const isDead = newHealth <= 0;
         
         return {
             ...prev,
             playerHealth: newHealth,
-            comboCount: 0, // Reset combo
-            isPlayerHit: true,
-            feedbackMessage: "受到伤害！",
+            playerArmor: newArmor,
+            monsterAttackProgress: newRage,
+            comboCount: 0, 
+            isPlayerHit: isHit,
+            isPlayerStunned: true, 
+            feedbackMessage: msg,
             feedbackType: 'error',
             stage: isDead ? GameStage.GAME_OVER : GameStage.PLAYING
         }
       });
 
-      // Clear hit effect after delay
       setTimeout(() => {
         setGameState(prev => {
              if (prev.stage === GameStage.GAME_OVER) return prev; 
-             
              return {
                 ...prev,
+                isPlayerStunned: false,
                 isPlayerHit: false,
                 feedbackMessage: null,
                 feedbackType: null,
@@ -263,59 +399,57 @@ export default function App() {
                 stage: GameStage.PLAYING
              }
         });
-      }, 1500);
+      }, STUN_DURATION);
     }
   };
 
   const handleCardUse = (card: Card) => {
-    if (gameState.currentEnergy < card.cost) return;
+    if (gameState.currentEnergy < card.cost || gameState.isPlayerStunned) return;
 
     const usedHandCard = card as HandCard;
-
-    // Conveyor Belt Mechanism:
-    // 1. Remove the used card (filtering by uniqueId)
-    // 2. Add a new random card to the END of the hand
     const remainingHand = gameState.hand.filter(c => c.uniqueId !== usedHandCard.uniqueId);
     
-    // Pick new random card
-    const nextCardTemplate = shuffleArray(CARDS)[0];
+    // Draw new card from Available Role Cards
+    const nextCardTemplate = shuffleArray(gameState.availableCards)[0];
     const nextHandCard = createHandCard(nextCardTemplate);
-    
     const newHand = [...remainingHand, nextHandCard];
 
-    // HEALING LOGIC
+    // HEALING
     if (card.effectType === 'heal') {
-         setGameState(prev => {
-            const healAmount = card.value === 0 ? 1 : card.value; 
-            const newHealth = Math.min(prev.playerHealth + healAmount, prev.maxPlayerHealth);
-            
-            return {
-                ...prev,
-                playerHealth: newHealth,
-                currentEnergy: prev.currentEnergy - card.cost, // Deduct Cost
-                feedbackMessage: `恢复 ${healAmount} 颗心!`,
-                feedbackType: 'success',
-                hand: newHand
-            };
-         });
-         
-         setTimeout(() => {
-            setGameState(prev => ({
-                ...prev,
-                feedbackMessage: null,
-            }));
-         }, 1200);
+         setGameState(prev => ({
+            ...prev,
+            playerHealth: Math.min(prev.playerHealth + (card.value || 1), prev.maxPlayerHealth),
+            currentEnergy: prev.currentEnergy - card.cost, 
+            feedbackMessage: `恢复 ${card.value} 颗心!`,
+            feedbackType: 'success',
+            hand: newHand
+         }));
+         setTimeout(() => setGameState(p => ({...p, feedbackMessage: null})), 1200);
          return;
     }
 
-    // DAMAGE LOGIC
+    // DEFENSE
+    if (card.effectType === 'defense') {
+         setGameState(prev => ({
+            ...prev,
+            playerArmor: Math.min(prev.playerArmor + (card.value || 3), prev.maxArmor),
+            currentEnergy: prev.currentEnergy - card.cost, 
+            feedbackMessage: `护甲增加 ${card.value}!`,
+            feedbackType: 'success',
+            hand: newHand
+         }));
+         setTimeout(() => setGameState(p => ({...p, feedbackMessage: null})), 1200);
+         return;
+    }
+
+    // DAMAGE
     const currentBoss = LEVELS[gameState.currentLevelIndex];
     const { finalDamage, text } = getDamageAnalysis(card.element, currentBoss.element, card.value);
 
     setGameState(prev => ({
       ...prev,
       isMonsterHit: true,
-      currentEnergy: prev.currentEnergy - card.cost, // Deduct Cost
+      currentEnergy: prev.currentEnergy - card.cost, 
       feedbackMessage: `${text} -${finalDamage}`,
       hand: newHand
     }));
@@ -377,6 +511,7 @@ export default function App() {
           onAnswer={handleAnswer}
           onCardSelect={handleCardUse}
           onNextLevel={handleNextLevel}
+          onHeroSkill={handleHeroSkill}
         />
       )}
 
@@ -385,7 +520,7 @@ export default function App() {
           score={gameState.score}
           monsterHealth={gameState.monsterHealth}
           isGameOver={gameState.stage === GameStage.GAME_OVER}
-          playerRole={gameState.playerRole} // New Prop
+          playerRole={gameState.playerRole} 
           knowledgeCollected={gameState.knowledgeCollected}
           onRestart={restartGame} 
         />

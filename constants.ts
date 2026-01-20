@@ -1,12 +1,20 @@
+
 import { Question, Card, LevelConfig } from './types';
 
 export const PASS_SCORE = 3; 
-export const MAX_PLAYER_HEALTH = 3; 
-export const MAX_ENERGY = 10; // Max accumulated energy
+export const MAX_PLAYER_HEALTH = 5; 
+export const MAX_ENERGY = 10; 
+export const MAX_ARMOR = 5; // Max Armor Cap
+export const HERO_SKILL_COOLDOWN = 20; // 20 Seconds CD
+
+// Battle Constants
+export const BASIC_ATTACK_DAMAGE = 2; 
+export const STUN_DURATION = 1500; 
+export const LEVEL_TIME_LIMIT = 180; 
+export const MONSTER_RAGE_PER_MISTAKE = 50; 
 
 // --- ASSETS REGISTRY ---
 export const ASSETS = {
-  // Updated Image Assets based on specific user provided URLs
   BG_MAIN: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E4%B8%BB%E7%95%8C%E9%9D%A2.png",
   BG_VICTORY: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E8%83%9C%E5%88%A9%E9%A1%B5%E9%9D%A2.png",
   BG_GAME_OVER: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E5%A4%B1%E8%B4%A5%E9%A1%B5%E9%9D%A2.png",
@@ -16,7 +24,6 @@ export const ASSETS = {
   
   BOSS_DRAGON: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E9%AD%94%E9%BE%99Boss.png",
   
-  // Audio Assets
   BGM_MENU: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E7%AB%A5%E8%AF%9D%E6%A3%AE%E6%9E%97%E7%9A%84%E6%97%A9%E6%99%A8%EF%BC%88%E6%97%A0%E6%95%8C%E5%96%9C%E6%AC%A2%EF%BC%89.mp3",
   BGM_BATTLE: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/wagames%E5%8B%87%E6%B0%94%E5%A4%A7%E5%86%92%E9%99%A9%C2%B7%E6%88%98%E6%96%97BGM.mp3"
 };
@@ -28,38 +35,42 @@ export const LEVELS: LevelConfig[] = [
     name: "迷雾森林",
     bossName: "果冻史莱姆",
     bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E5%8F%B2%E8%8E%B1%E5%A7%86.png", 
-    bossHealth: 25, 
+    bossHealth: 40, 
     bgGradient: "from-green-300 to-emerald-600",
     bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E8%BF%B7%E9%9B%BE%E6%A3%AE%E6%9E%97.png",
     themeColor: "text-emerald-700",
-    element: 'nature' 
+    element: 'nature',
+    monsterAttackInterval: 0 
   },
   {
     levelNumber: 2,
     name: "熔岩火山",
     bossName: "火焰石头人",
     bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E7%9F%B3%E5%B7%A8%E4%BA%BA.png", 
-    bossHealth: 60, 
+    bossHealth: 80, 
     bgGradient: "from-orange-300 to-red-700",
     bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E7%82%8E%E7%83%AD%E7%81%AB%E5%B1%B1.png",
     themeColor: "text-orange-800",
-    element: 'fire' 
+    element: 'fire',
+    monsterAttackInterval: 0
   },
   {
     levelNumber: 3,
     name: "魔王城堡",
     bossName: "暗夜魔龙",
     bossIcon: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/wagames%E9%AD%94%E9%BE%99Boss.png", 
-    bossHealth: 100,
+    bossHealth: 150,
     bgGradient: "from-indigo-400 to-purple-900",
     bgImage: "https://raw.githubusercontent.com/XiaoSir2077/my-base/main/images/%E9%AD%94%E7%8E%8B%E5%9F%8E.png",
     themeColor: "text-purple-900",
-    element: 'dark' 
+    element: 'dark',
+    monsterAttackInterval: 0
   }
 ];
 
 export const TOTAL_QUESTIONS = 60; 
 
+// Questions remain the same...
 export const QUESTIONS: Question[] = [
   // --- 语文古诗 (1-20) ---
   { id: 1, category: "古诗", text: "《山行》：停车坐爱枫林晚，______。", options: ["霜叶红于二月花", "欲穷千里目", "两个黄鹂鸣翠柳", "一行白鹭上青天"], correctAnswer: "霜叶红于二月花", knowledgePoint: "山行" },
@@ -128,59 +139,107 @@ export const QUESTIONS: Question[] = [
   { id: 60, category: "英语", text: "I will ______ my grandparents next weekend.", options: ["visit", "visits", "visited", "visiting"], correctAnswer: "visit", knowledgePoint: "一般将来时" },
 ];
 
-// Cards Rebalanced: ~1 Energy = 2 Damage
 export const CARDS: Card[] = [
+  // --- XIAOWEI (WARRIOR) CARDS ---
   {
     id: 'sword',
     name: '勇者之剑',
     description: '基础物理攻击',
-    value: 4, // 2 Cost -> 4 Dmg
+    value: 6, 
     cost: 2, 
     effectType: 'damage',
     rarity: 'common',
     icon: '⚔️',
     color: 'from-blue-400 to-blue-600',
     animationClass: 'animate-shake',
-    element: 'physical'
-  },
-  {
-    id: 'potion_s',
-    name: '小红药水',
-    description: '恢复1颗爱心',
-    value: 1,
-    cost: 3, // Healing is expensive
-    effectType: 'heal',
-    rarity: 'common',
-    icon: '❤️',
-    color: 'from-pink-300 to-rose-400',
-    animationClass: 'animate-bounce',
-    element: 'heal'
+    element: 'physical',
+    allowedRoles: ['xiaowei']
   },
   {
     id: 'shield',
     name: '圣光护盾',
-    description: '恢复1颗爱心',
-    value: 1, 
+    description: '获得3点护甲',
+    value: 3, 
     cost: 3,
-    effectType: 'heal', 
+    effectType: 'defense', 
     rarity: 'rare',
     icon: '🛡️',
     color: 'from-yellow-200 to-amber-400',
     animationClass: 'animate-pulse',
-    element: 'light'
+    element: 'light',
+    allowedRoles: ['xiaowei', 'xiaoya']
   },
   {
     id: 'fireball',
     name: '爆裂火球',
     description: '燃烧吧！',
-    value: 6, // 3 Cost -> 6 Dmg
+    value: 10, 
     cost: 3, 
     effectType: 'damage',
     rarity: 'rare',
     icon: '🔥',
     color: 'from-orange-400 to-red-600',
     animationClass: 'animate-pop',
-    element: 'fire'
+    element: 'fire',
+    allowedRoles: ['xiaowei']
+  },
+  {
+    id: 'hammer',
+    name: '泰坦重锤',
+    description: '物理重击',
+    value: 12, 
+    cost: 4,
+    effectType: 'damage',
+    rarity: 'rare',
+    icon: '🔨',
+    color: 'from-amber-200 to-orange-500',
+    animationClass: 'animate-bounce',
+    element: 'physical',
+    allowedRoles: ['xiaowei']
+  },
+  {
+    id: 'dragon',
+    name: '终极龙息',
+    description: '龙族之火',
+    value: 20, 
+    cost: 6, 
+    effectType: 'damage',
+    rarity: 'legendary',
+    icon: '🐲',
+    color: 'from-fuchsia-500 to-rose-600',
+    animationClass: 'animate-pulse',
+    element: 'fire',
+    allowedRoles: ['xiaowei']
+  },
+  
+  // --- XIAOYA (MAGE) CARDS ---
+  {
+    id: 'water',
+    name: '冰霜冲击',
+    description: '冻结敌人',
+    value: 6,
+    cost: 2,
+    effectType: 'damage',
+    rarity: 'common',
+    icon: '❄️',
+    color: 'from-cyan-300 to-blue-400',
+    animationClass: 'animate-pulse',
+    element: 'water',
+    allowedRoles: ['xiaoya']
+  },
+  {
+    id: 'wind',
+    name: '狂风龙卷',
+    description: '自然之风',
+    value: 6,
+    cost: 2,
+    effectType: 'damage',
+    rarity: 'common',
+    icon: '🌪️',
+    color: 'from-teal-200 to-cyan-500',
+    animationClass: 'animate-spin',
+    element: 'nature',
+    allowedRoles: ['xiaoya']
   },
   {
     id: 'potion_l',
@@ -193,123 +252,93 @@ export const CARDS: Card[] = [
     icon: '💖',
     color: 'from-pink-400 to-rose-600',
     animationClass: 'animate-pulse',
-    element: 'heal'
+    element: 'heal',
+    allowedRoles: ['xiaoya']
   },
   {
     id: 'thunder',
     name: '雷霆万钧',
     description: '强力电击',
-    value: 10, // 5 Cost -> 10 Dmg
+    value: 15, 
     cost: 5, 
     effectType: 'damage',
     rarity: 'legendary',
     icon: '⚡',
     color: 'from-yellow-300 to-purple-600',
     animationClass: 'animate-ping',
-    element: 'light'
-  },
-  {
-    id: 'water',
-    name: '冰霜冲击',
-    description: '冻结敌人',
-    value: 4, // 2 Cost -> 4 Dmg
-    cost: 2,
-    effectType: 'damage',
-    rarity: 'common',
-    icon: '❄️',
-    color: 'from-cyan-300 to-blue-400',
-    animationClass: 'animate-pulse',
-    element: 'water'
-  },
-  {
-    id: 'star',
-    name: '流星群',
-    description: '来自星空的力量',
-    value: 6, // 3 Cost -> 6 Dmg
-    cost: 3,
-    effectType: 'damage',
-    rarity: 'rare',
-    icon: '🌠',
-    color: 'from-indigo-400 to-pink-500',
-    animationClass: 'animate-bounce',
-    element: 'light'
-  },
-  {
-    id: 'wind',
-    name: '狂风龙卷',
-    description: '自然之风',
-    value: 4,
-    cost: 2,
-    effectType: 'damage',
-    rarity: 'common',
-    icon: '🌪️',
-    color: 'from-teal-200 to-cyan-500',
-    animationClass: 'animate-spin',
-    element: 'nature'
-  },
-  {
-    id: 'hammer',
-    name: '泰坦重锤',
-    description: '物理重击',
-    value: 8, // 4 Cost -> 8 Dmg
-    cost: 4,
-    effectType: 'damage',
-    rarity: 'rare',
-    icon: '🔨',
-    color: 'from-amber-200 to-orange-500',
-    animationClass: 'animate-bounce',
-    element: 'physical'
-  },
-  {
-    id: 'dragon',
-    name: '终极龙息',
-    description: '龙族之火',
-    value: 12, // 6 Cost -> 12 Dmg
-    cost: 6, // Ultimate
-    effectType: 'damage',
-    rarity: 'legendary',
-    icon: '🐲',
-    color: 'from-fuchsia-500 to-rose-600',
-    animationClass: 'animate-pulse',
-    element: 'fire'
+    element: 'light',
+    allowedRoles: ['xiaoya']
   },
   {
     id: 'tsunami',
     name: '海啸冲击',
     description: '巨大的水浪',
-    value: 10,
+    value: 16,
     cost: 5,
     effectType: 'damage',
     rarity: 'legendary',
     icon: '🌊',
     color: 'from-blue-500 to-cyan-600',
     animationClass: 'animate-shake',
-    element: 'water'
-  },
-  {
-    id: 'boulder',
-    name: '巨石滚滚',
-    description: '从天而降的岩石',
-    value: 6,
-    cost: 3,
-    effectType: 'damage',
-    rarity: 'common',
-    icon: '🪨',
-    color: 'from-stone-400 to-stone-600',
-    animationClass: 'animate-bounce',
-    element: 'nature'
+    element: 'water',
+    allowedRoles: ['xiaoya']
   },
   {
     id: 'blackhole',
     name: '暗黑物质',
     description: '神秘的宇宙力量',
-    value: 8,
+    value: 12,
     cost: 4,
     effectType: 'damage',
     rarity: 'rare',
     icon: '⚫',
     color: 'from-gray-700 to-black',
     animationClass: 'animate-pulse',
-    element: 'dark'
+    element: 'dark',
+    allowedRoles: ['xiaoya']
+  },
+
+  // --- SHARED / COMMON ---
+  {
+    id: 'potion_s',
+    name: '小红药水',
+    description: '恢复1颗爱心',
+    value: 1,
+    cost: 3, 
+    effectType: 'heal',
+    rarity: 'common',
+    icon: '❤️',
+    color: 'from-pink-300 to-rose-400',
+    animationClass: 'animate-bounce',
+    element: 'heal',
+    allowedRoles: ['xiaowei', 'xiaoya']
+  },
+  {
+    id: 'boulder',
+    name: '巨石滚滚',
+    description: '从天而降的岩石',
+    value: 8,
+    cost: 3,
+    effectType: 'damage',
+    rarity: 'common',
+    icon: '🪨',
+    color: 'from-stone-400 to-stone-600',
+    animationClass: 'animate-bounce',
+    element: 'nature',
+    allowedRoles: ['xiaowei']
+  },
+  {
+    id: 'star',
+    name: '流星群',
+    description: '来自星空的力量',
+    value: 8,
+    cost: 3,
+    effectType: 'damage',
+    rarity: 'rare',
+    icon: '🌠',
+    color: 'from-indigo-400 to-pink-500',
+    animationClass: 'animate-bounce',
+    element: 'light',
+    allowedRoles: ['xiaoya']
   }
 ];
